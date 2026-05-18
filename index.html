@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>PAGE REPLACEMENT ALGORITHM SIMULATOR | FIFO · OPTIMAL · LRU</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: radial-gradient(ellipse at 20% 30%, #0a0c1a 0%, #020408 100%);
+      font-family: 'Space Grotesk', sans-serif;
+      padding: 1.8rem 1.5rem;
+      min-height: 100vh;
+      color: #eef5ff;
+    }
+
+    /* futuristic grid overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image: 
+        linear-gradient(#0f172a 1px, transparent 1px),
+        linear-gradient(90deg, #0f172a 1px, transparent 1px);
+      background-size: 50px 50px;
+      opacity: 0.3;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 1500px;
+      margin: 0 auto;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* header — neon vibe */
+    .hero {
+      text-align: center;
+      margin-bottom: 2.5rem;
+    }
+
+    .neon-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0, 255, 255, 0.08);
+      border: 1px solid rgba(0, 255, 255, 0.3);
+      padding: 0.3rem 1.2rem;
+      border-radius: 30px;
+      font-size: 0.65rem;
+      font-weight: 500;
+      letter-spacing: 2px;
+      color: #0ff;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+      backdrop-filter: blur(4px);
+    }
+
+    h1 {
+      font-size: 2.8rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #fff, #0ff, #a855f7);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      letter-spacing: -1px;
+      text-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
+    }
+
+    .sub {
+      color: #8b9bb5;
+      font-size: 0.85rem;
+      letter-spacing: 0.5px;
+      margin-top: 0.3rem;
+    }
+
+    /* glass futuristic card */
+    .card {
+      background: rgba(10, 14, 23, 0.7);
+      backdrop-filter: blur(12px);
+      border-radius: 24px;
+      padding: 1.6rem;
+      margin-bottom: 1.8rem;
+      border: 1px solid rgba(0, 255, 255, 0.15);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      transition: all 0.25s ease;
+    }
+
+    .card:hover {
+      border-color: rgba(0, 255, 255, 0.4);
+      box-shadow: 0 0 20px rgba(0, 255, 255, 0.1);
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 1.2rem;
+      padding-bottom: 0.6rem;
+      border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+    }
+
+    .card-header span:first-child {
+      font-size: 1.3rem;
+    }
+
+    .card-header h3 {
+      font-weight: 500;
+      font-size: 0.85rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #0ff;
+    }
+
+    /* form */
+    .form-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .field {
+      flex: 1;
+      min-width: 170px;
+    }
+
+    .field label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.6rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #0ff;
+      margin-bottom: 0.4rem;
+    }
+
+    .range-hint {
+      font-size: 0.55rem;
+      color: #5b7a9a;
+      font-weight: normal;
+      letter-spacing: 0.5px;
+    }
+
+    input, select {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid #2d3e5a;
+      border-radius: 12px;
+      padding: 0.7rem 1rem;
+      font-family: 'Space Mono', monospace;
+      font-size: 0.8rem;
+      color: #eef5ff;
+      transition: 0.2s;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: #0ff;
+      box-shadow: 0 0 0 2px rgba(0, 255, 255, 0.2);
+    }
+
+    /* algorithm chips */
+    .algo-cluster {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .algo-chip {
+      background: rgba(15, 25, 45, 0.8);
+      border: 1px solid #2d3e5a;
+      padding: 0.5rem 1.3rem;
+      border-radius: 40px;
+      font-weight: 500;
+      font-size: 0.7rem;
+      font-family: 'Space Mono', monospace;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: #b0c4de;
+    }
+
+    .algo-chip.active {
+      background: linear-gradient(105deg, #00b4d8, #0096c7);
+      border-color: #0ff;
+      color: white;
+      box-shadow: 0 0 12px rgba(0, 180, 216, 0.5);
+    }
+
+    /* button group */
+    .btn-pack {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+      margin-top: 1rem;
+    }
+
+    .btn {
+      padding: 0.6rem 1.3rem;
+      border-radius: 40px;
+      font-weight: 600;
+      font-size: 0.7rem;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: rgba(20, 30, 50, 0.9);
+      color: #b0c4de;
+      border: 1px solid #2d3e5a;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    .btn-primary {
+      background: linear-gradient(105deg, #00b4d8, #0096c7);
+      border: none;
+      color: white;
+      box-shadow: 0 0 8px rgba(0, 180, 216, 0.4);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.05);
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+      border-color: #0ff;
+    }
+
+    .error-container {
+      background: rgba(255, 0, 100, 0.1);
+      border-left: 3px solid #ff3366;
+      border-radius: 12px;
+      padding: 0.7rem 1rem;
+      margin-top: 1rem;
+      font-size: 0.7rem;
+      color: #ff99aa;
+      display: none;
+    }
+
+    /* stats — holographic */
+    .stats-holo {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .stat-tile {
+      background: rgba(5, 10, 20, 0.6);
+      backdrop-filter: blur(4px);
+      border-radius: 20px;
+      padding: 1rem;
+      text-align: center;
+      border: 1px solid rgba(0, 255, 255, 0.2);
+    }
+
+    .stat-digit {
+      font-size: 2rem;
+      font-weight: 700;
+      font-family: 'Space Mono', monospace;
+      line-height: 1;
+    }
+
+    .stat-label {
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: #7dd3fc;
+      margin-top: 0.3rem;
+    }
+
+    .fault-tile .stat-digit { color: #ff6b6b; text-shadow: 0 0 5px #ff6b6b; }
+    .hit-tile .stat-digit { color: #4ade80; text-shadow: 0 0 5px #4ade80; }
+    .ratio-tile .stat-digit { color: #fbbf24; text-shadow: 0 0 5px #fbbf24; }
+
+    /* toolbar */
+    .ctrl-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 1.2rem;
+    }
+
+    .step-ctrl {
+      background: rgba(20, 30, 50, 0.8);
+      border: 1px solid #2d3e5a;
+      border-radius: 30px;
+      padding: 0.4rem 1rem;
+      font-size: 0.7rem;
+      font-weight: 500;
+      cursor: pointer;
+      color: #b0c4de;
+    }
+
+    .step-indicator {
+      background: rgba(0, 0, 0, 0.5);
+      padding: 0.4rem 1rem;
+      border-radius: 30px;
+      font-family: monospace;
+      font-size: 0.7rem;
+      border: 1px solid #2d3e5a;
+    }
+
+    .view-flex {
+      display: flex;
+      gap: 0;
+      border: 1px solid #2d3e5a;
+      border-radius: 30px;
+      overflow: hidden;
+      background: rgba(20, 30, 50, 0.8);
+    }
+
+    .view-choice {
+      padding: 0.4rem 1rem;
+      font-size: 0.65rem;
+      font-weight: 600;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      color: #8b9bb5;
+    }
+
+    .view-choice.active {
+      background: #00b4d8;
+      color: white;
+    }
+
+    /* table — cyber */
+    .table-scroll {
+      overflow-x: auto;
+      overflow-y: auto;
+      max-height: 520px;
+      border-radius: 20px;
+      background: rgba(5, 10, 20, 0.5);
+      border: 1px solid #1e2a3e;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.75rem;
+    }
+
+    th {
+      text-align: left;
+      padding: 1rem;
+      background: rgba(0, 180, 216, 0.1);
+      color: #0ff;
+      font-weight: 500;
+      letter-spacing: 1px;
+      border-bottom: 1px solid #1e2a3e;
+      position: sticky;
+      top: 0;
+      backdrop-filter: blur(4px);
+    }
+
+    td {
+      padding: 0.8rem 1rem;
+      border-bottom: 1px solid #1a2538;
+    }
+
+    .frame-collection {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      max-width: 420px;
+    }
+
+    .frame-unit {
+      width: 42px;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #0a0f1a;
+      border-radius: 12px;
+      font-family: 'Space Mono', monospace;
+      font-weight: 700;
+      border: 1px solid #2d3e5a;
+      transition: all 0.1s;
+    }
+
+    .frame-fault-glitch {
+      background: rgba(255, 50, 80, 0.15);
+      border-color: #ff3366;
+      color: #ff8899;
+      box-shadow: 0 0 8px rgba(255, 51, 102, 0.3);
+    }
+
+    .frame-hit-glow {
+      background: rgba(74, 222, 128, 0.1);
+      border-color: #4ade80;
+      color: #86efac;
+    }
+
+    .frame-empty {
+      background: #050a10;
+      border: 1px dashed #2d3e5a;
+      color: #4a627a;
+    }
+
+    .status-chip {
+      display: inline-block;
+      padding: 0.2rem 0.8rem;
+      border-radius: 20px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .status-fault {
+      background: rgba(255, 51, 102, 0.15);
+      color: #ff6680;
+      border: 1px solid #ff3366;
+    }
+
+    .status-hit {
+      background: rgba(74, 222, 128, 0.1);
+      color: #4ade80;
+      border: 1px solid #4ade80;
+    }
+
+    .row-active {
+      background: rgba(0, 255, 255, 0.05);
+      box-shadow: inset 0 0 0 2px #0ff;
+      border-radius: 12px;
+    }
+
+    /* compare — futuristic */
+    .compare-matrix {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    @media (max-width: 780px) {
+      .compare-matrix { grid-template-columns: 1fr; }
+    }
+
+    .comp-card {
+      background: rgba(10, 14, 23, 0.8);
+      border-radius: 20px;
+      padding: 1rem;
+      border: 1px solid #2d3e5a;
+    }
+
+    .comp-title {
+      font-weight: 600;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid #2d3e5a;
+      margin-bottom: 0.7rem;
+      display: flex;
+      justify-content: space-between;
+      color: #0ff;
+    }
+
+    .winner-flare {
+      color: #fbbf24;
+      font-size: 0.6rem;
+    }
+
+    .footer {
+      text-align: center;
+      margin-top: 2.5rem;
+      font-size: 0.65rem;
+      color: #4a627a;
+      border-top: 1px solid #1e2a3e;
+      padding-top: 1.2rem;
+      letter-spacing: 1px;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="hero">
+    <div class="neon-tag">JOHN KENNETH S. REYES <BR> BSCS - 3C </BR></div>
+    <h1>PAGE REPLACEMENT ALGORITHM SIMULATOR</h1>
+    <p class="sub">FIFO · OPTIMAL · LRU </p>
+  </div>
+
+  <!-- config panel -->
+  <div class="card">
+    <div class="card-header"><span>⚙️</span><h3>system config</h3></div>
+    <div class="form-grid">
+      <div class="field"><label>📡 reference string</label><input type="text" id="refStr" value="7 0 1 2 0 3 0 4 2 3 0 3 2" placeholder="7 0 1 2 0 3"></div>
+      <div class="field">
+        <label>💾 frames <span class="range-hint">(1 – 1000)</span></label>
+        <input type="number" id="frameCnt" value="3" min="1" max="1000" step="1">
+      </div>
+      <div class="field"><label>🧠 algorithm</label><div class="algo-cluster"><div class="algo-chip active" data-algo="fifo">FIFO</div><div class="algo-chip" data-algo="optimal">OPTIMAL</div><div class="algo-chip" data-algo="lru">LRU</div></div></div>
+    </div>
+    <div class="btn-pack">
+      <button class="btn btn-primary" id="simulateBtn">▶ RUN SIMULATION</button>
+      <button class="btn" id="randomBtn">🎲 RANDOM</button>
+      <button class="btn" id="resetBtn">⟳ RESET</button>
+      <button class="btn" id="compareBtn">📊 COMPARE</button>
+    </div>
+    <div id="errorBox" class="error-container"></div>
+    <div id="algoHint" style="margin-top: 1rem; background: rgba(0, 255, 255, 0.05); border-radius: 16px; padding: 0.6rem 1rem; font-size: 0.7rem; border-left: 3px solid #0ff;">
+      💠 <strong id="algoName">FIFO</strong> — first-in first-out protocol
+    </div>
+  </div>
+
+  <!-- results zone -->
+  <div id="resultsPanel" style="display: none;">
+    <div class="stats-holo">
+      <div class="stat-tile fault-tile"><div class="stat-digit" id="faultsNum">0</div><div class="stat-label">PAGE FAULTS</div></div>
+      <div class="stat-tile hit-tile"><div class="stat-digit" id="hitsNum">0</div><div class="stat-label">PAGE HITS</div></div>
+      <div class="stat-tile ratio-tile"><div class="stat-digit" id="ratioNum">0%</div><div class="stat-label">HIT RATIO</div></div>
+      <div class="stat-tile"><div class="stat-digit" id="activeAlgoDisplay">—</div><div class="stat-label">ACTIVE</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><span>📟</span><h3>execution trace</h3></div>
+      <div class="ctrl-bar">
+        <button class="step-ctrl" id="prevStepBtn" disabled>← PREV</button>
+        <button class="step-ctrl" id="nextStepBtn">NEXT →</button>
+        <div class="step-indicator" id="stepCounter">step 0 / 0</div>
+        <button class="step-ctrl" id="autoPlayBtn">▶ AUTO</button>
+        <div class="view-flex"><button class="view-choice active" id="viewAllBtn">ALL</button><button class="view-choice" id="viewSingleBtn">CURRENT</button></div>
+      </div>
+      <div class="table-scroll"><table><thead><tr><th>STEP</th><th>PAGE</th><th>FRAME BUFFER</th><th>STATUS</th><th>LOG</th></tr></thead><tbody id="traceBody"></tbody></table></div>
+    </div>
+
+    <div id="compareZone" style="margin-top: 1rem; display: none;">
+      <div class="card"><div class="card-header"><span>🏆</span><h3>algorithm comparison matrix</h3></div><div id="compareGrid" class="compare-matrix"></div></div>
+    </div>
+  </div>
+  <div class="footer">⚡ neural page replacement simulator · supports up to 1000 frames</div>
+</div>
+
+<script>
+  // ========== ALGORITHM CORES (optimized for up to 1000 frames) ==========
+  function fifoCore(pages, limit) {
+    let frames = [], queue = [], steps = [], faults = 0, hits = 0;
+    for (let i = 0; i < pages.length; i++) {
+      const p = pages[i];
+      let isFault = false, note = "";
+      const hitIdx = frames.indexOf(p);
+      if (hitIdx !== -1) {
+        hits++;
+        note = `✅ HIT: page ${p} already resident.`;
+      } else {
+        faults++;
+        isFault = true;
+        if (frames.length < limit) {
+          frames.push(p);
+          queue.push(p);
+          note = `📥 loaded ${p} → free frame.`;
+        } else {
+          const oldest = queue.shift();
+          const idx = frames.indexOf(oldest);
+          frames[idx] = p;
+          queue.push(p);
+          note = `🔄 FIFO: replaced oldest ${oldest} with ${p}.`;
+        }
+      }
+      steps.push({ step: i+1, page: p, frames: [...frames], isFault, note, newPage: isFault ? p : null, hitPage: !isFault ? p : null, limit });
+    }
+    return { steps, faults, hits };
+  }
+  
+  function optimalCore(pages, limit) {
+    let frames = [], steps = [], faults = 0, hits = 0;
+    for (let i = 0; i < pages.length; i++) {
+      const p = pages[i];
+      let isFault = false, note = "";
+      const hitIdx = frames.indexOf(p);
+      if (hitIdx !== -1) {
+        hits++;
+        note = `✅ HIT: page ${p} in memory.`;
+      } else {
+        faults++;
+        isFault = true;
+        if (frames.length < limit) {
+          frames.push(p);
+          note = `📥 loaded ${p} into empty slot.`;
+        } else {
+          let farthest = -1, victim = null;
+          for (let f of frames) {
+            let nextUse = pages.slice(i+1).indexOf(f);
+            if (nextUse === -1) { victim = f; break; }
+            if (nextUse > farthest) { farthest = nextUse; victim = f; }
+          }
+          const idx = frames.indexOf(victim);
+          frames[idx] = p;
+          note = `🎯 OPTIMAL: replaced ${victim} (farthest future) with ${p}.`;
+        }
+      }
+      steps.push({ step: i+1, page: p, frames: [...frames], isFault, note, newPage: isFault ? p : null, hitPage: !isFault ? p : null, limit });
+    }
+    return { steps, faults, hits };
+  }
+  
+  function lruCore(pages, limit) {
+    let frames = [], recency = [], steps = [], faults = 0, hits = 0;
+    for (let i = 0; i < pages.length; i++) {
+      const p = pages[i];
+      let isFault = false, note = "";
+      const hitIdx = frames.indexOf(p);
+      if (hitIdx !== -1) {
+        hits++;
+        recency = recency.filter(x => x !== p);
+        recency.push(p);
+        note = `✅ LRU HIT: ${p} → most recent.`;
+      } else {
+        faults++;
+        isFault = true;
+        if (frames.length < limit) {
+          frames.push(p);
+          recency.push(p);
+          note = `📥 loaded ${p} into free frame.`;
+        } else {
+          let lruPage = recency.find(x => frames.includes(x));
+          const idx = frames.indexOf(lruPage);
+          frames[idx] = p;
+          recency = recency.filter(x => x !== lruPage);
+          recency.push(p);
+          note = `⏰ LRU: evicted ${lruPage} (least recent) → ${p}.`;
+        }
+      }
+      steps.push({ step: i+1, page: p, frames: [...frames], isFault, note, newPage: isFault ? p : null, hitPage: !isFault ? p : null, limit });
+    }
+    return { steps, faults, hits };
+  }
+
+  // ========== APP STATE ==========
+  let currentSteps = [], currentStepIdx = 0, selectedAlgo = "fifo", viewMode = "all", autoTimer = null, isAuto = false;
+
+  const refInp = document.getElementById("refStr");
+  const frameInp = document.getElementById("frameCnt");
+  const simBtn = document.getElementById("simulateBtn");
+  const randBtn = document.getElementById("randomBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const compareBtn = document.getElementById("compareBtn");
+  const resultsDiv = document.getElementById("resultsPanel");
+  const errorDiv = document.getElementById("errorBox");
+  const algoNameSpan = document.getElementById("algoName");
+  
+  const descMap = { 
+    fifo: "FIFO — first-in first-out: evicts oldest page", 
+    optimal: "OPTIMAL — replaces page unused for longest future", 
+    lru: "LRU — evicts least recently accessed page" 
+  };
+
+  function showError(m) { 
+    errorDiv.style.display = "block"; 
+    errorDiv.innerText = m; 
+    setTimeout(() => errorDiv.style.display = "none", 4000); 
+  }
+  
+  function parseRef(s) { 
+    return s.trim().split(/[\s,]+/).map(v => parseInt(v)).filter(n => !isNaN(n)); 
+  }
+  
+  function stopAuto() { 
+    if (autoTimer) { clearInterval(autoTimer); autoTimer = null; } 
+    isAuto = false; 
+    document.getElementById("autoPlayBtn").innerHTML = "▶ AUTO"; 
+  }
+  
+  function startAuto() { 
+    if (isAuto) stopAuto(); 
+    if (!currentSteps.length) return; 
+    isAuto = true; 
+    document.getElementById("autoPlayBtn").innerHTML = "⏸ PAUSE"; 
+    autoTimer = setInterval(() => { 
+      if (currentStepIdx < currentSteps.length) { 
+        currentStepIdx++; 
+        renderTrace(); 
+        if (currentStepIdx === currentSteps.length) stopAuto(); 
+      } else stopAuto(); 
+    }, 680); 
+  }
+
+  function renderTrace() {
+    const tbody = document.getElementById("traceBody"); 
+    tbody.innerHTML = "";
+    const toShow = viewMode === "all" ? currentSteps : (currentStepIdx > 0 ? [currentSteps[currentStepIdx-1]] : []);
+    
+    toShow.forEach(step => {
+      const row = document.createElement("tr");
+      const isHighlight = (viewMode === "all" && step.step === currentStepIdx) || (viewMode === "single");
+      if (isHighlight) row.classList.add("row-active");
+      
+      let td1 = document.createElement("td"); 
+      td1.innerText = step.step; 
+      row.appendChild(td1);
+      
+      let td2 = document.createElement("td"); 
+      td2.innerHTML = `<strong style="font-size:1rem;">${step.page}</strong>`; 
+      row.appendChild(td2);
+      
+      let td3 = document.createElement("td"); 
+      let wrap = document.createElement("div"); 
+      wrap.className = "frame-collection";
+      
+      // Show first 12 frames and indicate if more exist (for large frame counts)
+      const maxDisplay = 12;
+      const toDisplay = step.frames.slice(0, maxDisplay);
+      
+      for (let i = 0; i < toDisplay.length; i++) {
+        let val = toDisplay[i];
+        let box = document.createElement("div"); 
+        box.className = "frame-unit";
+        if (val === undefined || val === null) {
+          box.textContent = "—"; 
+          box.classList.add("frame-empty");
+        } else {
+          box.textContent = val;
+          if (step.newPage === val && step.isFault) box.classList.add("frame-fault-glitch");
+          else if (step.hitPage === val && !step.isFault) box.classList.add("frame-hit-glow");
+        }
+        wrap.appendChild(box);
+      }
+      
+      if (step.frames.length > maxDisplay) {
+        let moreBox = document.createElement("div");
+        moreBox.className = "frame-unit frame-empty";
+        moreBox.textContent = `+${step.frames.length - maxDisplay}`;
+        moreBox.style.width = "auto";
+        moreBox.style.padding = "0 12px";
+        wrap.appendChild(moreBox);
+      }
+      
+      td3.appendChild(wrap); 
+      row.appendChild(td3);
+      
+      let td4 = document.createElement("td"); 
+      td4.innerHTML = step.isFault ? '<span class="status-chip status-fault">FAULT</span>' : '<span class="status-chip status-hit">HIT</span>'; 
+      row.appendChild(td4);
+      
+      let td5 = document.createElement("td"); 
+      td5.style.fontSize = "0.7rem"; 
+      td5.style.color = "#8b9bb5"; 
+      td5.innerText = step.note; 
+      row.appendChild(td5);
+      
+      tbody.appendChild(row);
+    });
+    
+    document.getElementById("stepCounter").innerHTML = `step ${currentStepIdx} / ${currentSteps.length}`;
+    document.getElementById("prevStepBtn").disabled = currentStepIdx <= 1;
+    document.getElementById("nextStepBtn").disabled = currentStepIdx >= currentSteps.length;
+    
+    if (viewMode === "single" && currentStepIdx > 0) { 
+      const r = tbody.querySelector("tr"); 
+      if (r) r.scrollIntoView({ behavior: "smooth", block: "center" }); 
+    }
+  }
+
+  function runSimulation() {
+    stopAuto();
+    let pages = parseRef(refInp.value);
+    let frames = parseInt(frameInp.value);
+    
+    if (pages.length === 0) return showError("⚠️ reference string cannot be empty");
+    if (isNaN(frames) || frames < 1) return showError("frames must be between 1 and 1000");
+    if (frames > 1000) return showError("maximum frames allowed is 1000");
+    if (pages.length > 200) return showError("max 200 references for performance");
+    
+    let result;
+    if (selectedAlgo === "fifo") result = fifoCore(pages, frames);
+    else if (selectedAlgo === "optimal") result = optimalCore(pages, frames);
+    else result = lruCore(pages, frames);
+    
+    currentSteps = result.steps;
+    currentStepIdx = currentSteps.length;
+    
+    document.getElementById("faultsNum").innerText = result.faults;
+    document.getElementById("hitsNum").innerText = result.hits;
+    let ratio = ((result.hits / pages.length) * 100).toFixed(1);
+    document.getElementById("ratioNum").innerHTML = `${ratio}%`;
+    document.getElementById("activeAlgoDisplay").innerHTML = selectedAlgo.toUpperCase();
+    
+    resultsDiv.style.display = "block";
+    document.getElementById("compareZone").style.display = "none";
+    renderTrace();
+  }
+
+  function compareAll() {
+    let pages = parseRef(refInp.value);
+    let frames = parseInt(frameInp.value);
+    
+    if (pages.length === 0) return showError("no string to compare");
+    if (isNaN(frames) || frames < 1) return showError("invalid frames");
+    if (frames > 500) return showError("comparison limited to 500 frames for performance");
+    
+    const f = fifoCore(pages, frames);
+    const o = optimalCore(pages, frames);
+    const l = lruCore(pages, frames);
+    const minF = Math.min(f.faults, o.faults, l.faults);
+    const maxF = Math.max(f.faults, o.faults, l.faults);
+    const grid = document.getElementById("compareGrid");
+    grid.innerHTML = "";
+    
+    const items = [
+      { name: "FIFO", data: f, color: "#0ff" },
+      { name: "OPTIMAL", data: o, color: "#4ade80" },
+      { name: "LRU", data: l, color: "#fbbf24" }
+    ];
+    
+    items.forEach(item => {
+      const hitRat = ((item.data.hits / pages.length) * 100).toFixed(1);
+      const isBest = item.data.faults === minF;
+      const barPercent = maxF > 0 ? (item.data.faults / maxF) * 100 : 0;
+      const card = document.createElement("div");
+      card.className = "comp-card";
+      card.innerHTML = `
+        <div class="comp-title">
+          <span>${item.name}</span>
+          ${isBest ? '<span class="winner-flare">🏆 BEST</span>' : ''}
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <span>FAULTS</span><strong>${item.data.faults}</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <span>HITS</span><strong>${item.data.hits}</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+          <span>HIT RATIO</span><strong>${hitRat}%</strong>
+        </div>
+        <div>
+          <div style="height:3px; background:#1e2a3e;">
+            <div style="width:${barPercent}%; height:3px; background:${item.color}; box-shadow:0 0 6px ${item.color};"></div>
+          </div>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+    
+    document.getElementById("compareZone").style.display = "block";
+    resultsDiv.style.display = "block";
+    document.getElementById("compareZone").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  // event binding
+  document.querySelectorAll(".algo-chip").forEach(ch => {
+    ch.addEventListener("click", () => {
+      document.querySelectorAll(".algo-chip").forEach(c => c.classList.remove("active"));
+      ch.classList.add("active");
+      selectedAlgo = ch.getAttribute("data-algo");
+      algoNameSpan.innerText = selectedAlgo.toUpperCase();
+      document.getElementById("algoHint").innerHTML = `💠 <strong id="algoName">${selectedAlgo.toUpperCase()}</strong> — ${descMap[selectedAlgo]}`;
+    });
+  });
+  
+  simBtn.addEventListener("click", runSimulation);
+  
+  randBtn.addEventListener("click", () => {
+    let len = Math.floor(Math.random() * 10) + 6;
+    let maxP = Math.floor(Math.random() * 6) + 3;
+    let arr = Array.from({ length: len }, () => Math.floor(Math.random() * maxP));
+    refInp.value = arr.join(" ");
+    frameInp.value = Math.floor(Math.random() * 15) + 2;
+  });
+  
+  resetBtn.addEventListener("click", () => {
+    stopAuto();
+    resultsDiv.style.display = "none";
+    document.getElementById("compareZone").style.display = "none";
+    refInp.value = "";
+    frameInp.value = "3";
+    currentSteps = [];
+    currentStepIdx = 0;
+  });
+  
+  compareBtn.addEventListener("click", compareAll);
+  document.getElementById("prevStepBtn").addEventListener("click", () => {
+    if (currentStepIdx > 1) { currentStepIdx--; renderTrace(); }
+  });
+  document.getElementById("nextStepBtn").addEventListener("click", () => {
+    if (currentStepIdx < currentSteps.length) { currentStepIdx++; renderTrace(); }
+  });
+  document.getElementById("autoPlayBtn").addEventListener("click", () => {
+    if (isAuto) stopAuto();
+    else if (currentSteps.length) startAuto();
+  });
+  document.getElementById("viewAllBtn").addEventListener("click", () => {
+    viewMode = "all";
+    document.getElementById("viewAllBtn").classList.add("active");
+    document.getElementById("viewSingleBtn").classList.remove("active");
+    renderTrace();
+  });
+  document.getElementById("viewSingleBtn").addEventListener("click", () => {
+    viewMode = "single";
+    document.getElementById("viewSingleBtn").classList.add("active");
+    document.getElementById("viewAllBtn").classList.remove("active");
+    if (currentSteps.length && currentStepIdx === 0) currentStepIdx = 1;
+    renderTrace();
+  });
+  
+  document.getElementById("algoHint").innerHTML = `💠 <strong id="algoName">FIFO</strong> — ${descMap.fifo}`;
+</script>
+</body>
+</html>
